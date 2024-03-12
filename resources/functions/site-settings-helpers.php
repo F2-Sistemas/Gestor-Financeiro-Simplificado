@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\SiteSetting;
+use Illuminate\Support\Collection;
 
 if (!function_exists('site_setting')) {
     /**
@@ -37,12 +38,14 @@ if (!function_exists('site_config_get')) {
      * Using dot notation like `site_config_get('admin.logo')`
      *
      * @param mixed $default
+     * @param bool $parsedValue
      *
      * @return mixed
      */
     function site_config_get(
         string $configKey,
         mixed $default = null,
+        bool $parsedValue = true,
     ): mixed {
         $configKey = trim($configKey);
 
@@ -64,6 +67,7 @@ if (!function_exists('site_config_get')) {
             $group,
             $key,
             $invalidString,
+            parsedValue: $parsedValue,
         );
 
         if (is_string($value) && $value === $invalidString) {
@@ -130,12 +134,13 @@ if (!function_exists('site_config_set')) {
      * function site_config_set
      *
      * @param string $configKey
-     * Using dot notation like `site_config_set('admin.logo', 'route', ['name' => 'my_route_name', 'params' => [1]])`
-     *
-     * @param string $type
-     * Example: url|route|string|int|float|...
+     * Using dot notation like `site_config_set('admin.logo', )`
      *
      * @param mixed $value
+     *
+     * @param ?string $type
+     * Example: url|route|string|int|float|...
+     *
      * @param array $extraData
      * @param bool $active
      *
@@ -143,13 +148,21 @@ if (!function_exists('site_config_set')) {
      */
     function site_config_set(
         string $configKey,
-        string $type,
         mixed $value,
+        ?string $type = null,
         array $extraData = [],
         bool $active = true,
         ?string $castValueUsing = null,
     ): bool {
         $configKey = trim($configKey);
+
+        if (is_null($type)) {
+            $type = gettype($value);
+
+            $type = $type === 'object' && is_a($value, Collection::class) ? 'collection' : $type;
+
+            $type = $type === 'object' ? 'serialized' : $type;
+        }
 
         if (!in_array($type, SiteSetting::VALID_TYPES)) {
             throw new Exception('Invalid "type".', 150);
@@ -174,7 +187,7 @@ if (!function_exists('site_config_set')) {
             'key' => $key,
             'content' => [
                 'type' => $type,
-                'value' => $value,
+                'value' => SiteSetting::inlineCasterSet($type, $value),
                 'castValueUsing' => $castValueUsing && is_callable($castValueUsing) ? $castValueUsing : null,
                 'extraData' => $extraData,
             ],

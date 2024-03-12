@@ -23,6 +23,7 @@ class SiteSetting extends Model
         'domain',
         'string',
         'route',
+        'asset',
         'array',
         'collection',
         'serialized',
@@ -54,12 +55,12 @@ class SiteSetting extends Model
 
     public function getParsedValueAttribute()
     {
-        return $this->getParsedValue(null);
+        return $this->getValue(true, null);
     }
 
     public function getValueAttribute()
     {
-        return $this->getParsedValue(null);
+        return $this->getValue(true, null);
     }
 
     public function getTypeAttribute()
@@ -70,6 +71,15 @@ class SiteSetting extends Model
     public function getExtraDataAttribute()
     {
         return $this->getContent()?->get('extraData') ?? null;
+    }
+
+    public function getValue(bool $parsedValue = true, mixed $defaultValue = null): mixed
+    {
+        if ($parsedValue) {
+            return $this->getParsedValue($defaultValue);
+        }
+
+        return $this->getContent()?->get('value') ?? null;
     }
 
     public function getContent(?Collection $defaultContent = null): Collection
@@ -103,6 +113,7 @@ class SiteSetting extends Model
             'domain' => filter_var($value, FILTER_VALIDATE_DOMAIN, FILTER_NULL_ON_FAILURE),
             'string' => filter_var($value, FILTER_DEFAULT, FILTER_NULL_ON_FAILURE),
             'route' => static::inlineCasterGet('route', $value, $extraData),
+            'asset' => static::inlineCasterGet('asset', $value, $extraData),
             'array' => $value && is_string($value) ? json_decode($value, true) : [],
             'collection' => collect($value && is_string($value) ? json_decode($value, true) : []),
             'serialized' => static::inlineCasterGet('serialized', $value, $extraData),
@@ -116,9 +127,15 @@ class SiteSetting extends Model
     public static function inlineCasterGet(string $type, mixed $value, array $extraData = []): mixed
     {
         if ($type === 'route') {
-            $routeName = filter_var($value, FILTER_DEFAULT, FILTER_NULL_ON_FAILURE);
+            $value = filter_var($value, FILTER_DEFAULT, FILTER_NULL_ON_FAILURE);
 
-            return $routeName && Route::has($routeName) ? route($routeName, $extraData) : null;
+            return $value && Route::has($value) ? route($value, $extraData) : null;
+        }
+
+        if ($type === 'asset') {
+            $value = filter_var($value, FILTER_DEFAULT, FILTER_NULL_ON_FAILURE);
+
+            return $value ? asset($value) : null;
         }
 
         if ($type === 'serialized') { // TODO implement try_unserialize
@@ -163,6 +180,7 @@ class SiteSetting extends Model
      * if `$limit === 0` has no limit
      *
      * @param bool $activeOnly
+     * @param bool $parsedValue
      *
      * @return mixed
      */
@@ -172,6 +190,7 @@ class SiteSetting extends Model
         mixed $default = null,
         int $limit = 30,
         bool $activeOnly = true,
+        bool $parsedValue = true,
     ): mixed {
         $query = static::query()
             ->where('group', $group);
@@ -182,9 +201,15 @@ class SiteSetting extends Model
 
         if (!is_null($key)) {
             $noData = 'NO-DATA';
-            $value = $query->where('key', $key)?->first()?->getParsedValue($noData) ?? $noData;
 
-            return ($value && $value !== $noData) ? $value : $default;
+            /**
+             * @var string|static $record
+             */
+            $record = $query->where('key', $key)?->first()  ?? $noData;
+
+            // $record = $record && $parsedValue ? $record?->getValue($parsedValue, $noData) : $record;
+
+            return ($record && $record !== $noData) ? $record?->getValue($parsedValue, $default) : $default;
         }
 
         if ($limit > 0) {
