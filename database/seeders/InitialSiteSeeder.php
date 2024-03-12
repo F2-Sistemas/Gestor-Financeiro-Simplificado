@@ -18,6 +18,10 @@ class InitialSiteSeeder extends Seeder
         $this->initialUsers();
         $this->initialSettings();
         $this->dummyData();
+
+        $this->call([
+            SiteSettingSeeder::class,
+        ]);
     }
 
     public function initialUsers(): void
