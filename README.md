@@ -1,5 +1,6 @@
 ## Get started Laravel project
 
+### [App Docs](./docs/README.md)
 
 #### Install composer dependencies
 ```sh

@@ -40,6 +40,7 @@ class SiteSettingFactory extends Factory
                     default => null
                 },
                 'castValueUsing' => null,
+                'extraData' => [], // Util for route params
             ],
             'active' => fake()->boolean(90),
         ];
