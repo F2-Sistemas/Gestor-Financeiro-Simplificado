@@ -207,9 +207,9 @@ class SiteSetting extends Model
              */
             $record = $query->where('key', $key)?->first()  ?? $noData;
 
-            // $record = $record && $parsedValue ? $record?->getValue($parsedValue, $noData) : $record;
+            $record = $record && $parsedValue ? $record?->getValue($parsedValue, $noData) : $record;
 
-            return ($record && $record !== $noData) ? $record?->getValue($parsedValue, $default) : $default;
+            return ($record && $record !== $noData) ? $record : $default;
         }
 
         if ($limit > 0) {
