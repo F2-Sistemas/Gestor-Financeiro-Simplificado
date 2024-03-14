@@ -205,9 +205,13 @@ class SiteSetting extends Model
             /**
              * @var string|static $record
              */
-            $record = $query->where('key', $key)?->first()  ?? $noData;
+            $record = $query->where('key', $key)?->first() ?? $noData;
 
-            $record = $record && $parsedValue ? $record?->getValue($parsedValue, $noData) : $record;
+            if (!$record || $record === $noData) {
+                return $default;
+            }
+
+            $record = is_object($record) && $parsedValue ? $record?->getValue($parsedValue, $noData) : $record;
 
             return ($record && $record !== $noData) ? $record : $default;
         }
